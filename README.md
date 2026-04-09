@@ -495,4 +495,3 @@ Then open **http://localhost:8501** in your browser.
 ---
 
 *Al-Safwa Bank · Risk Management Department*  
-*ATM Network Optimisation System — developed as part of the internship programme at Al-Hussein bin Abdullah Technical University (HTU)*
