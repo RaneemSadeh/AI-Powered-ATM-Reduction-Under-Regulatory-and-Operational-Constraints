@@ -1,0 +1,93 @@
+Problem Definition
+I’m facing a network optimization under constraint problem. The Central Bank may force a 25–50% reduction in operational ATMs. My job is to decide which ATMs to keep running so that:
+Service coverage is maximized (geographic, temporal, transactional)
+Financial loss is minimized
+Risk scenarios are handled (curfew/mall closures, fuel/power shortages)
+I have 45 ATMs across Jordan (Amman, Zarqa, Irbid, Mafraq, Karak, Salt, Ramtha, Jerash, Madaba, Aqaba). If I keep 50%, I keep ~22–23 ATMs. If 25%, only ~11.
+The Data to Collect
+Per ATM (from your document + enrichment):
+Feature
+Source
+Notes
+Location (lat/lng)
+Google Maps geocoding
+Critical for spatial graph
+Branch type
+Your doc
+Mall vs. street branch
+Operating hours
+Your doc
+Mall branches are open later
+Services offered
+Your doc
+NFC, cash deposit, contactless withdrawal
+Transaction volume (daily/weekly)
+Core banking
+Most important signal
+Unique customer count
+Core banking
+How many people depend on this ATM
+Avg. transaction value
+Core banking
+Revenue proxy
+Power source type
+Operations dept.
+Grid-dependent vs. generator
+Fuel/generator backup hours
+Operations dept.
+Critical for outage scenario
+Nearby ATM distance
+Computed
+Substitutability if this ATM closes
+Population density in 500m radius
+GIS/Census
+Demand proxy
+Nearest alternative ATM (same bank)
+Computed
+Graph edge weight
+Solution Architecture
+ATM network graph is structured
+The Three-Model Approach in Detail
+Model 1 — Graph Neural Network (GNN)
+Why GNN: ATMs don't exist in isolation. If you remove ATM A, its customers don't disappear — they migrate to the nearest substitute. GNNs model this network dependency natively.
+Setup: Build a graph where each ATM is a node with features (transaction volume, services, hours, location, power resilience). Edges connect ATMs within a configurable radius (say 2 km), weighted by inverse distance. You then use a GraphSAGE or Graph Attention Network (GAT) to learn a utility embedding for each node — essentially: "how much network value does this ATM carry?"
+The key task you'd train on is coverage loss prediction: given a subset of removed ATMs, predict the number of customers left unserved. With historical data on branch closures (maintenance, outages), you can generate training examples.
+Model 2 — Integer Linear Programming (ILP)
+Why ILP: Once the GNN gives you a utility score per ATM per scenario, the selection problem is a classic budgeted maximum coverage problem — provably solvable with ILP.
+The formulation:
+Maximize: Σ (utility_i × x_i)Subject to: Σ x_i ≤ k (where k = 25% or 50% of 45)And: x_i ∈ {0,1} (keep or remove)Scenario constraints: if curfew → x_mall_i = 0 forcedPower constraint: at least 1 generator-backed ATM per region
+Model 3 — Scenario Sensitivity Analysis
+Run both models across four scenarios:
+Scenario
+Constraint
+ATMs to keep
+Normal 50% reduction
+Power/fuel cost
+~22 ATMs
+Curfew (mall closures)
+7 malls forced off + 50% budget
+~22 from remaining 38
+Severe 25% + curfew
+Both constraints active
+~11 ATMs, all street branches
+Rolling outage
+Generator backup ≥ 4hrs required
+Subset with backup power
+From Your ATM List: Immediate Observations
+Based only on the document you shared, before any model runs, here are the risk signals:
+High risk of forced closure (mall branches — curfew scenario): City Mall, Mecca Mall, Taj Mall, Jerusalem St. (B5 Mall), Irbid City Centre, Istiklal Mall, Bab Al-Madina Market (Zarqa).
+Highest service capability (NFC + cash deposit + contactless withdrawal — keep these): Shmeisani, Wihdat, Jabal Hussein, Sahab, Zarqa New, Ramtha, Karak, Aqaba, Salt, Dabouk, Mafraq.
+Isolated nodes (no nearby substitute if removed — protect these): Mafraq, Karak, Jerash, Aqaba, Ramtha, Salt. These serve populations with no alternative. Even in a 25% scenario, removing them creates geographic dead zones that a central bank regulator would flag.
+Branches with no NFC, no deposit services: Khalda, Jabal Amman, Jerash — these are candidates for removal in a severe cut if transaction volumes are low.
+Recommended Tech Stack
+python
+# Graph construction
+networkx + torch_geometric (PyG)  # for GNN
+# Optimization
+pulp or ortools                    # for ILP
+# Spatial analysis
+geopandas + shapely               # for coverage radius computation
+# Visualization of results
+folium or kepler.gl               # for interactive ATM map output
+# Scenario runner
+pandas + scikit-learn             # for scoring
