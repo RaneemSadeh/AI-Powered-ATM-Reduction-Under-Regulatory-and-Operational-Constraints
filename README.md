@@ -1,7 +1,7 @@
 # ATM Network Optimisation — Al-Safwa Bank, Jordan
 
 > **AI-Powered ATM Reduction Under Regulatory and Operational Constraints**  
-> Risk Management Department · Data Science & AI Division
+> Risk Management Department - Data Science & AI Division
 
 ---
 
